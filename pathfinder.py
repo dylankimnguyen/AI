@@ -59,41 +59,38 @@ def bfs_search(map_size, start_position, end_position, map_data):
 
     return "null"
 
-
-# Uniform Cost Search (UCS) algorithm
 def ucs_search(map_size, start_position, end_position, map_data):
-    opened = [(0, Node(start_position))]  # Initialize the opened list with the start node and its distance value
-    closed = set()  # Initialize the closed list
-    actions = [(0, -1), (0, 1), (-1, 0), (1, 0)]  # Define possible movement actions
+    opened = [(0, Node(start_position))]
+    closed = set()
+    node_dict = {start_position: 0}
+    actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Down, Right, Up, Left
 
     while opened:
-        _, selected_node = heapq.heappop(opened)  # Select the node with the minimum distance value
+        _, selected_node = heapq.heappop(opened)
         position = selected_node.state
 
-        if position == end_position:  # Check if the selected node is the target
-            return selected_node.path  # Return the path to the target
+        if position == end_position:
+            return selected_node.path
 
-        closed.add(position)  # Add the selected node to the closed list
+        closed.add(position)
 
         for action in actions:
-            new_position = (position[0] + action[0], position[1] + action[1])  # Calculate the new position
+            new_position = (position[0] + action[0], position[1] + action[1])
             if (0 < new_position[0] <= map_size[0] and
                 0 < new_position[1] <= map_size[1] and
                 map_data[new_position[0] - 1][new_position[1] - 1] != 'X'):
-                
-                new_cost = selected_node.cost + 1  # Calculate the distance value of the child
-                new_path = selected_node.path + [new_position]  # Update the path
-                new_node = Node(new_position, new_path, new_cost)
+
+                new_cost = selected_node.cost + 1
+                new_path = selected_node.path + [new_position]
 
                 if new_position not in closed:
-                    heapq.heappush(opened, (new_cost, new_node))  # Add the child to the opened list
-                else:
-                    for i, (_, node) in enumerate(opened):
-                        if node.state == new_position and new_cost < node.cost:
-                            opened[i] = (new_cost, new_node)  # Update the distance value if a better path is found
-                            heapq.heapify(opened)  # Reorder the opened list
+                    if new_position not in node_dict or new_cost < node_dict[new_position]:
+                        node_dict[new_position] = new_cost
+                        heapq.heappush(opened, (new_cost, Node(new_position, new_path, new_cost)))
+                    elif new_cost == node_dict[new_position]:  # If cost is equal, prefer downward movement
+                        heapq.heappush(opened, (new_cost, Node(new_position, new_path, new_cost)))
 
-    return "null"  # No path found
+    return None  # Return None instead of "null" for consistency
 
 
 
@@ -101,7 +98,7 @@ def ucs_search(map_size, start_position, end_position, map_data):
 def astar_search(map_size, start_position, end_position, map_data, heuristic):
     fringe = [(0, Node(start_position))]
     visited = set()  
-    actions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+    actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
 
     while fringe:
         _, node = heapq.heappop(fringe)  
