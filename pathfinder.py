@@ -2,18 +2,21 @@ import heapq
 from collections import deque
 import sys
 
+# Define a Node class to represent nodes in the search tree
 class Node:
     def __init__(self, state, path=[], cost=0):
         self.state = state
-        self.path = path 
-        self.cost = cost  
+        self.path = path  # Path from the start node to this node
+        self.cost = cost  # Cost of the path from the start node to this node
 
+    # Define comparison methods for heapq
     def __lt__(self, other):
         return self.cost < other.cost
 
     def __eq__(self, other):
         return self.state == other.state
 
+# Read map file and return map size, start position, end position, and map data
 def read_map_file(file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -25,6 +28,7 @@ def read_map_file(file_path):
 
     return map_size, start_position, end_position, map_data
 
+# Breadth First Search (BFS) algorithm
 def bfs_search(map_size, start_position, end_position, map_data):
     fringe = deque([Node(start_position)])
     visited = set()  
@@ -53,6 +57,7 @@ def bfs_search(map_size, start_position, end_position, map_data):
 
     return "null" 
 
+# Uniform Cost Search (UCS) algorithm
 def ucs_search(map_size, start_position, end_position, map_data):
     fringe = [(0, Node(start_position))]
     visited = set()  
@@ -82,6 +87,7 @@ def ucs_search(map_size, start_position, end_position, map_data):
 
     return "null" 
 
+# A* Search algorithm
 def astar_search(map_size, start_position, end_position, map_data, heuristic):
     fringe = [(0, Node(start_position))]
     visited = set()  
@@ -117,15 +123,14 @@ def astar_search(map_size, start_position, end_position, map_data, heuristic):
 
     return "null"  
 
-
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage: python pathfinder.py [map] [algorithm] [heuristic]")
+    if len(sys.argv) < 4 or len(sys.argv) > 5:
+        print("Usage: python pathfinder.py [map] [algorithm] [heuristic (optional)]")
         sys.exit(1)
 
     map_file = sys.argv[1]
     algorithm = sys.argv[2]
-    heuristic = sys.argv[3]
+    heuristic = sys.argv[3] if len(sys.argv) == 4 else None
 
     map_size, start_position, end_position, map_data = read_map_file(map_file)
 
@@ -134,7 +139,11 @@ if __name__ == "__main__":
     elif algorithm == 'ucs':
         result = ucs_search(map_size, start_position, end_position, map_data)
     elif algorithm == 'astar':
-        result = astar_search(map_size, start_position, end_position, map_data, heuristic)
+        if heuristic:
+            result = astar_search(map_size, start_position, end_position, map_data, heuristic)
+        else:
+            print("Error: A* algorithm requires a heuristic.")
+            sys.exit(1)
     else:
         print("Invalid algorithm. Choose from 'bfs', 'ucs', or 'astar'.")
         sys.exit(1)
@@ -146,8 +155,6 @@ if __name__ == "__main__":
             for j in range(1, map_size[1] + 1):
                 if (i, j) == start_position:
                     print("*", end=" ")
-                elif (i, j) == end_position:
-                    print("X", end=" ")
                 elif (i, j) in result:
                     print("*", end=" ")
                 else:
