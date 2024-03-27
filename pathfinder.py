@@ -33,7 +33,7 @@ def bfs_search(map_size, start_position, end_position, map_data):
 
     fringe = deque([Node(start_position)])
     visited = set()  
-    actions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+    actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Down, Right, Up, Left
 
     while fringe:
         node = fringe.popleft()  
@@ -52,11 +52,13 @@ def bfs_search(map_size, start_position, end_position, map_data):
             if (0 < new_position[0] <= map_size[0] and
                 0 < new_position[1] <= map_size[1] and
                 map_data[new_position[0] - 1][new_position[1] - 1] != 'X'):
-                
-                new_path = node.path + [new_position]
-                fringe.append(Node(new_position, new_path))
+        
+                new_path = node.path + [new_position]  # Update the path
+                fringe.append(Node(new_position, new_path))  # Append new node with updated path
 
-    return "null" 
+
+    return "null"
+
 
 # Uniform Cost Search (UCS) algorithm
 def ucs_search(map_size, start_position, end_position, map_data):
