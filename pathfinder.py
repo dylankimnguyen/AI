@@ -30,6 +30,7 @@ def read_map_file(file_path):
 
 # Breadth First Search (BFS) algorithm
 def bfs_search(map_size, start_position, end_position, map_data):
+
     fringe = deque([Node(start_position)])
     visited = set()  
     actions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
@@ -59,33 +60,40 @@ def bfs_search(map_size, start_position, end_position, map_data):
 
 # Uniform Cost Search (UCS) algorithm
 def ucs_search(map_size, start_position, end_position, map_data):
-    fringe = [(0, Node(start_position))]
-    visited = set()  
-    actions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+    opened = [(0, Node(start_position))]  # Initialize the opened list with the start node and its distance value
+    closed = set()  # Initialize the closed list
+    actions = [(0, -1), (0, 1), (-1, 0), (1, 0)]  # Define possible movement actions
 
-    while fringe:
-        _, node = heapq.heappop(fringe)  
-        position = node.state
+    while opened:
+        _, selected_node = heapq.heappop(opened)  # Select the node with the minimum distance value
+        position = selected_node.state
 
-        if position == end_position:  
-            return node.path
+        if position == end_position:  # Check if the selected node is the target
+            return selected_node.path  # Return the path to the target
 
-        if position in visited:  
-            continue
-
-        visited.add(position)
+        closed.add(position)  # Add the selected node to the closed list
 
         for action in actions:
-            new_position = (position[0] + action[0], position[1] + action[1])
+            new_position = (position[0] + action[0], position[1] + action[1])  # Calculate the new position
             if (0 < new_position[0] <= map_size[0] and
                 0 < new_position[1] <= map_size[1] and
                 map_data[new_position[0] - 1][new_position[1] - 1] != 'X'):
                 
-                new_cost = node.cost + 1  
-                new_path = node.path + [new_position]
-                heapq.heappush(fringe, (new_cost, Node(new_position, new_path, new_cost)))
+                new_cost = selected_node.cost + 1  # Calculate the distance value of the child
+                new_path = selected_node.path + [new_position]  # Update the path
+                new_node = Node(new_position, new_path, new_cost)
 
-    return "null" 
+                if new_position not in closed:
+                    heapq.heappush(opened, (new_cost, new_node))  # Add the child to the opened list
+                else:
+                    for i, (_, node) in enumerate(opened):
+                        if node.state == new_position and new_cost < node.cost:
+                            opened[i] = (new_cost, new_node)  # Update the distance value if a better path is found
+                            heapq.heapify(opened)  # Reorder the opened list
+
+    return "null"  # No path found
+
+
 
 # A* Search algorithm
 def astar_search(map_size, start_position, end_position, map_data, heuristic):
@@ -124,7 +132,7 @@ def astar_search(map_size, start_position, end_position, map_data, heuristic):
     return "null"  
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4 or len(sys.argv) > 5:
+    if len(sys.argv) < 2 or len(sys.argv) > 5:
         print("Usage: python pathfinder.py [map] [algorithm] [heuristic (optional)]")
         sys.exit(1)
 
