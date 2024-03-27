@@ -2,7 +2,6 @@ import heapq
 from collections import deque
 import sys
 
-#def stuctures
 class Node:
     def __init__(self, state, path=[], cost=0):
         self.state = state
@@ -15,7 +14,6 @@ class Node:
     def __eq__(self, other):
         return self.state == other.state
 
-# need to read map first
 def read_map_file(file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -27,7 +25,6 @@ def read_map_file(file_path):
 
     return map_size, start_position, end_position, map_data
 
-#algortihms
 def bfs_search(map_size, start_position, end_position, map_data):
     fringe = deque([Node(start_position)])
     visited = set()  
@@ -120,6 +117,7 @@ def astar_search(map_size, start_position, end_position, map_data, heuristic):
 
     return "null"  
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 4:
         print("Usage: python pathfinder.py [map] [algorithm] [heuristic]")
@@ -148,9 +146,10 @@ if __name__ == "__main__":
             for j in range(1, map_size[1] + 1):
                 if (i, j) == start_position:
                     print("*", end=" ")
+                elif (i, j) == end_position:
+                    print("X", end=" ")
                 elif (i, j) in result:
                     print("*", end=" ")
                 else:
                     print(map_data[i - 1][j - 1], end=" ")
             print()
-            
