@@ -25,7 +25,7 @@ def graph_search(problem, fringe):
         if goal_test(problem, state(node)):
             return node
         
-        if state(node) not in closed
+        if state(node) not in closed:
             closed.add(state(node))
             children = expand(node, problem)
             for child in children:
