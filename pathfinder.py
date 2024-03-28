@@ -1,169 +1,247 @@
-import heapq
-from collections import deque
 import sys
+import os
+import copy
+import heapq
+from array import *
+from collections import deque
+from queue import PriorityQueue
+from math import sqrt
 
-# Define a Node class to represent nodes in the search tree
-class Node:
-    def __init__(self, state, path=[], cost=0):
-        self.state = state
-        self.path = path  # Path from the start node to this node
-        self.cost = cost  # Cost of the path from the start node to this node
+mapInput = sys.argv[1]
+algorithm = sys.argv[2]
+if len(sys.argv) > 3:
+    heuristic = sys.argv[3]
 
-    # Define comparison methods for heapq
-    def __lt__(self, other):
-        return self.cost < other.cost
+map = []
+xSquares = 0
+ySquares = 0
 
-    def __eq__(self, other):
-        return self.state == other.state
+class node:
+    def __init__(self, parent, pos, cost):
+        self.parent = parent
+        self.pos = pos
+        self.cost = cost
 
-# Read map file and return map size, start position, end position, and map data
-def read_map_file(file_path):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
+def sortkey(node):
+    return node.cost
 
-    map_size = tuple(map(int, lines[0].split()))
-    start_position = tuple(map(int, lines[1].split()))
-    end_position = tuple(map(int, lines[2].split()))
-    map_data = [list(line.split()) for line in lines[3:]]
+def read_goal():
+    global start
+    global end
 
-    return map_size, start_position, end_position, map_data
+    file = open(mapInput,'r')
+    list = file.read().splitlines()
+    startList = list[1].split(' ')
+    start = (int(startList[0]) - 1,int(startList[1]) - 1)
+    endList = list[2].split(' ')
+    end = (int(endList[0]) - 1,int(endList[1]) - 1)
 
-# Breadth First Search (BFS) algorithm
-def bfs_search(map_size, start_position, end_position, map_data):
+def read_file():
+    global xSquares
+    global ySquares
+    global start
+    global end
 
-    fringe = deque([Node(start_position)])
-    visited = set()  
-    actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Down, Right, Up, Left
+    file = open(mapInput,'r')
+    list = file.read().splitlines()
+    lengthList = list[0].split(' ')
+    xSquares = int(lengthList[0])
+    ySquares = int(lengthList[1])
+    del list[0],list[0],list[0]
 
-    while fringe:
-        node = fringe.popleft()  
-        position = node.state
+    for i in range(len(list)):
+        templist = list[i].split(' ')
+        for j in range(0, len(templist)):
+            if(templist[i] != 'X'):
+                templist[i] = int(templist[i])
+        map.append(templist)
 
-        if position == end_position:  
-            return node.path
+    return map
 
-        if position in visited:  
+def print_array(array):
+    for i in range(0, len(array)):
+        for j in range(0, len(array)):
+            if (j < len(array) - 1): # if not last element in row
+                print(array[i][j], end = " ")
+            else:
+                print(array[i][j], end = '') #if last element in row
+        print()
+
+def getChildren(parent, tracker):
+    new_children = []
+    possibleMoves = [[-1,0],[1,0], [0,-1], [0,1]] #up down left right
+    
+    for i in range(0, len(possibleMoves)):
+        new_pos = possibleMoves[i]
+        next_pos = (parent.pos[0] + new_pos[0], parent.pos[1] + new_pos[1])
+
+        if(next_pos[0] == -1 or next_pos[1] == -1 or next_pos[0] >= xSquares or next_pos[1] >= ySquares):
             continue
-
-        visited.add(position)
-
-        for action in actions:
-            new_position = (position[0] + action[0], position[1] + action[1])
-            if (0 < new_position[0] <= map_size[0] and
-                0 < new_position[1] <= map_size[1] and
-                map_data[new_position[0] - 1][new_position[1] - 1] != 'X'):
-        
-                new_path = node.path + [new_position]  # Update the path
-                fringe.append(Node(new_position, new_path))  # Append new node with updated path
-
-
-    return "null"
-
-def ucs_search(map_size, start_position, end_position, map_data):
-    opened = [(0, Node(start_position))]
-    closed = set()
-    node_dict = {start_position: 0}
-    actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Down, Right, Up, Left
-
-    while opened:
-        _, selected_node = heapq.heappop(opened)
-        position = selected_node.state
-
-        if position == end_position:
-            return selected_node.path
-
-        closed.add(position)
-
-        for action in actions:
-            new_position = (position[0] + action[0], position[1] + action[1])
-            if (0 < new_position[0] <= map_size[0] and
-                0 < new_position[1] <= map_size[1] and
-                map_data[new_position[0] - 1][new_position[1] - 1] != 'X'):
-
-                new_cost = selected_node.cost + 1
-                new_path = selected_node.path + [new_position]
-
-                if new_position not in closed:
-                    if new_position not in node_dict or new_cost < node_dict[new_position]:
-                        node_dict[new_position] = new_cost
-                        heapq.heappush(opened, (new_cost, Node(new_position, new_path, new_cost)))
-                    elif new_cost == node_dict[new_position]:  # If cost is equal, prefer downward movement
-                        heapq.heappush(opened, (new_cost, Node(new_position, new_path, new_cost)))
-
-    return None  # Return None instead of "null" for consistency
-
-
-
-# A* Search algorithm
-def astar_search(map_size, start_position, end_position, map_data, heuristic):
-    fringe = [(0, Node(start_position))]
-    visited = set()  
-    actions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-
-    while fringe:
-        _, node = heapq.heappop(fringe)  
-        position = node.state
-
-        if position == end_position:  
-            return node.path
-
-        if position in visited:  
+        elif(map[next_pos[0]][next_pos[1]] == 'X'):
             continue
-
-        visited.add(position)
-
-        for action in actions:
-            new_position = (position[0] + action[0], position[1] + action[1])
-            if (0 < new_position[0] <= map_size[0] and
-                0 < new_position[1] <= map_size[1] and
-                map_data[new_position[0] - 1][new_position[1] - 1] != 'X'):
-                
-                new_cost = node.cost + 1  
-                if heuristic == 'euclidean':
-                    heuristic_cost = ((new_position[0] - end_position[0])**2 + 
-                                      (new_position[1] - end_position[1])**2)**0.5
-                elif heuristic == 'manhattan':
-                    heuristic_cost = abs(new_position[0] - end_position[0]) + abs(new_position[1] - end_position[1])
-                
-                new_path = node.path + [new_position]
-                heapq.heappush(fringe, (new_cost + heuristic_cost, Node(new_position, new_path, new_cost)))
-
-    return "null"  
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2 or len(sys.argv) > 5:
-        print("Usage: python pathfinder.py [map] [algorithm] [heuristic (optional)]")
-        sys.exit(1)
-
-    map_file = sys.argv[1]
-    algorithm = sys.argv[2]
-    heuristic = sys.argv[3] if len(sys.argv) == 4 else None
-
-    map_size, start_position, end_position, map_data = read_map_file(map_file)
-
-    if algorithm == 'bfs':
-        result = bfs_search(map_size, start_position, end_position, map_data)
-    elif algorithm == 'ucs':
-        result = ucs_search(map_size, start_position, end_position, map_data)
-    elif algorithm == 'astar':
-        if heuristic:
-            result = astar_search(map_size, start_position, end_position, map_data, heuristic)
+        elif(tracker[next_pos[0]][next_pos[1]] == True):
+            continue
         else:
-            print("Error: A* algorithm requires a heuristic.")
-            sys.exit(1)
-    else:
-        print("Invalid algorithm. Choose from 'bfs', 'ucs', or 'astar'.")
-        sys.exit(1)
+            new_cost = int(map[next_pos[0]][next_pos[1]]) + parent.cost
+            new_node = node(parent, next_pos, new_cost)
+            new_children.append(new_node)
 
-    if result == "null":
-        print("null")
+    return new_children
+
+def getChildrenAstar(parent, tracker, goal):
+    new_children = []
+    possibleMoves = [[-1,0],[1,0], [0,-1], [0,1]] #up down left right
+
+    for i in range(0, len(possibleMoves)):
+        new_pos = possibleMoves[i]
+        next_pos = (parent.pos[0] + new_pos[0], parent.pos[1] + new_pos[1])
+
+        if(next_pos[0] == -1 or next_pos[1] == -1 or next_pos[0] >= xSquares or next_pos[1] >= ySquares):
+            continue
+        elif(map[next_pos[0]][next_pos[1]] == 'X'):
+            continue
+        elif(tracker[next_pos[0]][next_pos[1]] == True):
+            continue
+        else:
+            g =  int(map[next_pos[0]][next_pos[1]]) + parent.cost
+
+            if (heuristic == "manhattan"):
+                h = abs((next_pos[0] - goal[0])) + abs((next_pos[1] - goal[1]))
+
+            if (heuristic == "euclidean"):
+                h = sqrt(((next_pos[0] - goal[0]) ** 2) + ((next_pos[1] - goal[1]) ** 2))
+
+            f = g + h #add cost + heuristic cost
+            new_cost = f
+            new_node = node(parent, next_pos, new_cost)
+            new_children.append(new_node)
+
+    return new_children
+
+def bfs(startPos, endPos):
+    map = read_file()
+    visited = []
+
+    for i in range (0, xSquares):
+        templist = []
+        for j in range (0, ySquares):
+            templist.append(False)
+        visited.append(templist)
+
+    start = node("None", startPos, 0)
+    current = start
+    queue = deque([])
+    visited[start.pos[0]][start.pos[1]] = True
+    queue.append(start)
+
+    while queue:
+        current = queue.popleft()
+        if(current.pos == endPos):
+            break
+
+        children = getChildren(current, visited)
+
+        for i in range(0, len(children)):
+            visited[children[i].pos[0]][children[i].pos[1]] = True
+            queue.append(children[i])
+
+    while current.parent != "None":
+        map[current.pos[0]][current.pos[1]] = '*'
+        current = current.parent
+    map[current.pos[0]][current.pos[1]] = '*'
+    print_array(map)
+
+def ucs(startPos, endPos):
+    map = read_file()
+    visited = []
+
+    for i in range (0, xSquares):
+        templist = []
+        for j in range (0, ySquares):
+            templist.append(False)
+        visited.append(templist)
+
+    start = node("None", startPos, 0)
+    current = start
+    queue = deque([])
+    visited[start.pos[0]][start.pos[1]] = True
+    queue.append(start)
+
+    found = False
+
+    while queue:
+        current = queue.popleft()
+        if(current.pos == endPos):
+            found = True
+            break
+
+        children = getChildren(current, visited)
+
+        children.sort(key=sortkey)
+
+        for i in range(0, len(children)):
+            visited[children[i].pos[0]][children[i].pos[1]] = True
+            queue.append(children[i])
+
+    if(found == True):
+        while current.parent != "None":
+            map[current.pos[0]][current.pos[1]] = '*'
+            current = current.parent
+        map[current.pos[0]][current.pos[1]] = '*'
+
+        print_array(map)
+
     else:
-        for i in range(1, map_size[0] + 1):
-            for j in range(1, map_size[1] + 1):
-                if (i, j) == start_position:
-                    print("*", end=" ")
-                elif (i, j) in result:
-                    print("*", end=" ")
-                else:
-                    print(map_data[i - 1][j - 1], end=" ")
-            print()
+        print("null")
+
+def astar(startPos, endPos):
+    map = read_file()
+
+    visited = []
+    for i in range (0, xSquares):
+        templist = []
+        for j in range (0, ySquares):
+            templist.append(False)
+        visited.append(templist)
+
+    start = node("None", startPos, 0)
+    current = start
+    queue = deque([])
+    visited[start.pos[0]][start.pos[1]] = True
+    queue.append(start)
+
+    found = False
+
+    while queue:
+        current = queue.popleft()
+
+        if(current.pos == endPos):
+            found = True
+            break
+
+        children = getChildrenAstar(current, visited, endPos)
+        children.sort(key=sortkey)
+
+        for i in range(0, len(children)):
+            visited[children[i].pos[0]][children[i].pos[1]] = True
+            queue.append(children[i])
+
+    if(found == True):
+        while current.parent != "None":
+            map[current.pos[0]][current.pos[1]] = '*'
+            current = current.parent
+        map[current.pos[0]][current.pos[1]] = '*'
+
+        print_array(map)
+
+    else:
+        print("null")
+
+read_goal()
+
+if(algorithm == "bfs"):
+    bfs(start),(end)
+elif(algorithm == "ucs"):
+    ucs((start),(end))
+elif(algorithm == "astar"):
+    astar((start),(end))
