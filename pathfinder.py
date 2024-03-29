@@ -1,309 +1,343 @@
-from array import *
-
 import sys
-import os
-import copy
 import heapq
-from collections import deque
-from queue import PriorityQueue
 from math import sqrt
 
+class Node:
 
-map_input = sys.argv[1]
-algorithm = sys.argv[2]
+    def __init__(self, state, parent=None, action=None, path_cost=0):
 
-if len(sys.argv) > 3:
-    heuristic = sys.argv[3]
+        self.state = state
 
-map = []
-
-xlen = 0
-ylen = 0
-
-class node:
-    def __init__(self, parent, pos, cost):
         self.parent = parent
-        self.pos = pos
-        self.cost = cost
+
+        self.action = action
+
+        self.path_cost = path_cost
+
+    def __lt__(self, other):
+
+        return self.path_cost < other.path_cost
 
 
-# Reads the input file and creates a map
-def read_goal():
-    global start
-    global end
 
-    file = open(map_input,'r')
-    list = file.read().splitlines()
-    startList = list[1].split(' ')
-    start = (int(startList[0]) - 1,int(startList[1]) - 1)
-    endList = list[2].split(' ')
-    end = (int(endList[0]) - 1,int(endList[1]) - 1)
+    def __eq__(self, other):
 
-def read_file():
-    global xlen
-    global ylen
-    global start
-    global end
+        return self.state == other.state
+    
+def read_map(filename):
 
+    with open(filename, 'r') as file:
 
-    file = open(map_input,'r')
-    list = file.read().splitlines()
-    lengthList = list[0].split(' ')
-    xlen = int(lengthList[0])
-    ylen = int(lengthList[1])
-    del list[0],list[0],list[0]
+        rows, cols = map(int, file.readline().split())
 
-    for i in range(len(list)):
-        templist = list[i].split(' ')
-        for j in range(0, len(templist)):
-            if(templist[i] != 'X'):
-                templist[i] = int(templist[i])
-        map.append(templist)
+        start_pos = tuple(map(int, file.readline().split()))
 
-    return map
+        end_pos = tuple(map(int, file.readline().split()))
 
-# Utility function to print the map
-def print_array(array):
-    for i in range(0, len(array)):
-        for j in range(0, len(array)):
-            if (j < len(array) - 1):
-                print(array[i][j], end = " ")
-            else:
-                print(array[i][j], end = '')
-        print()
+        grid = [list(map(str.strip, file.readline().split())) for _ in range(rows)]
 
-def sortkey(node):
-    return node.cost
-
-#Given a node, get its valid children and their cumilitve cost
-def getChildren(parent, tracker):
-    new_children = []
-    #Defines the range of movement
-    move = [[-1,0], # up
-            [1,0], # down
-            [0,-1], # left
-            [0,1]] # right
+    return rows, cols, start_pos, end_pos, grid
 
 
-    for i in range(0, len(move)):
-        new_pos = move[i]
+def print_map(grid):
 
-        #Move to next position
-        next_pos = (parent.pos[0] + new_pos[0], parent.pos[1] + new_pos[1])
+    for row in grid:
 
-        # Check for valid position
-        if(next_pos[0] == -1 or next_pos[1] == -1 or next_pos[0] >= xlen or next_pos[1] >= ylen):
-            continue
-        elif(map[next_pos[0]][next_pos[1]] == 'X'):
-            continue
-        elif(tracker[next_pos[0]][next_pos[1]] == True):
-            continue
-        else:
-            new_cost = int(map[next_pos[0]][next_pos[1]]) + parent.cost
-
-            new_node = node(parent, next_pos, new_cost)
-            new_children.append(new_node)
+        print(' '.join(row))
 
 
-    return new_children
+def is_valid_move(rows, cols, position):
 
-#Given a node, get its valid children and their cost including heuristic
-def getChildrenAstar(parent, tracker, goal):
-    new_children = []
-    #Defines the range of movement
-    move = [[-1,0], # up
-            [1,0], # down
-            [0,-1], # left
-            [0,1]] # right
+    return 0 < position[0] <= rows and 0 < position[1] <= cols
 
 
-    for i in range(0, len(move)):
-        new_pos = move[i]
+def is_valid_position(grid, position):
 
-        #Move to next position
-        next_pos = (parent.pos[0] + new_pos[0], parent.pos[1] + new_pos[1])
+    return is_valid_move(len(grid), len(grid[0]), position) and grid[position[0] - 1][position[1] - 1] != 'X'
 
-        # Check for valid position
-        if(next_pos[0] == -1 or next_pos[1] == -1 or next_pos[0] >= xlen or next_pos[1] >= ylen):
-            continue
-        elif(map[next_pos[0]][next_pos[1]] == 'X'):
-            continue
-        elif(tracker[next_pos[0]][next_pos[1]] == True):
-            continue
-        else:
+def get_neighbors(position, grid):
 
-            g =  int(map[next_pos[0]][next_pos[1]]) + parent.cost
+    neighbors = [(position[0] - 1, position[1]),  # Up
 
-            #Manhattan Heuristic Calculation -> h = |xstart - xdestination| + |ystart - ydestination|
-            if (heuristic == "manhattan"):
-                h = abs((next_pos[0] - goal[0])) + abs((next_pos[1] - goal[1]))
+                 (position[0] + 1, position[1]),  # Down
 
-            #Euclidean Heuristic Calculation -> h = sqrt((xstart - xdestination)^2 + (ystart - ydestination)^2)
-            if (heuristic == "euclidean"):
-                h = sqrt(((next_pos[0] - goal[0]) ** 2) + ((next_pos[1] - goal[1]) ** 2))
+                 (position[0], position[1] - 1),  # Left
 
-            f = g + h
-            new_cost = f
-            new_node = node(parent, next_pos, new_cost)
-            new_children.append(new_node)
+                 (position[0], position[1] + 1)]  # Right
+
+    return [neighbor for neighbor in neighbors if is_valid_position(grid, neighbor)]
 
 
-    return new_children
 
-def bfs(start_c, end_c):
-    map = read_file()
+def get_neighbors_with_down_priority(pos, grid):
 
-    #Initialize the visited array
-    visited = []
-    for i in range (0, xlen):
-        templist = []
-        for j in range (0, ylen):
-            templist.append(False)
-        visited.append(templist)
+    neighbors = []
+    directions = [(1, 0), (0, 1), (0, -1), (-1, 0)]
 
-    start = node("None", start_c, 0)
-    current = start
-    queue = deque([])
-    visited[start.pos[0]][start.pos[1]] = True
-    queue.append(start)
+    for direction in directions:
+
+        new_row = pos[0] + direction[0]
+
+        new_col = pos[1] + direction[1]
 
 
-    while queue:
-        #Pop the current node
-        current = queue.popleft()
 
-        #Check is current is end
-        if(current.pos == end_c):
-            break
+        # Check if the new position is within the grid bounds
 
-        #Get the children of current
-        children = getChildren(current, visited)
+        if 0 < new_row <= len(grid) and 0 < new_col <= len(grid[0]):
 
-        #Mark as visited and add to queue
-        for i in range(0, len(children)):
-            visited[children[i].pos[0]][children[i].pos[1]] = True
-            queue.append(children[i])
+            neighbors.append((new_row, new_col))
 
+    return neighbors
 
-    # Step back through the map to update the shortest path
-    while current.parent != "None":
-        map[current.pos[0]][current.pos[1]] = '*'
-        current = current.parent
-    map[current.pos[0]][current.pos[1]] = '*'
+def bfs(grid, start_pos, end_pos):
 
-    print_array(map)
+    frontier = [Node(start_pos)]
 
-def ucs(start_c, end_c):
-    map = read_file()
+    explored = set()
 
-    #Initialize the visited array
-    visited = []
-    for i in range (0, xlen):
-        templist = []
-        for j in range (0, ylen):
-            templist.append(False)
-        visited.append(templist)
+    while frontier:
 
-    start = node("None", start_c, 0)
-    current = start
-    queue = deque([])
-    visited[start.pos[0]][start.pos[1]] = True
-    queue.append(start)
+        node = frontier.pop(0)
 
-    found = False
+        if node.state == end_pos:
 
-    while queue:
-        #Pop the current node
-        current = queue.popleft()
+            return node
 
-        #Check is current is end
-        if(current.pos == end_c):
-            found = True
-            break
+        explored.add(node.state)
 
-        #Get the children of current
-        children = getChildren(current, visited)
+        for action in get_neighbors(node.state, grid):
 
-        #Sort children by cost
-        children.sort(key=sortkey)
+            if action not in explored:
 
-        #Mark as visited and add to queue
-        for i in range(0, len(children)):
-            visited[children[i].pos[0]][children[i].pos[1]] = True
-            queue.append(children[i])
+                child = Node(action, node)
+
+                frontier.append(child)
+
+                explored.add(action)
+
+    return None
 
 
-    # Step back through the map to update the shortest path
-    if(found == True):
-        while current.parent != "None":
-            map[current.pos[0]][current.pos[1]] = '*'
-            current = current.parent
-        map[current.pos[0]][current.pos[1]] = '*'
+def ucs(grid, start_pos, end_pos, heuristic=None):
 
-        print_array(map)
+    frontier = []
+
+    heapq.heappush(frontier, Node(start_pos))
+
+    explored = set()
+
+
+
+    while frontier:
+
+        node = heapq.heappop(frontier)
+
+        if node.state == end_pos:
+
+            return node
+
+        explored.add(node.state)
+
+        neighbors = get_neighbors_with_priority(node.state, grid)
+
+        for action in neighbors:
+
+            if action not in explored:
+
+                new_cost = node.path_cost + get_path_cost(grid, node.state, action)
+
+                child = Node(action, node, path_cost=new_cost)
+
+                heapq.heappush(frontier, child)
+
+                explored.add(action)
+
+    return None
+
+
+def get_neighbors_with_priority(pos, grid):
+
+    neighbors = []
+
+    # Define the possible directions: up, down, left, right
+
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+
+
+    for direction in directions:
+
+        new_row = pos[0] + direction[0]
+
+        new_col = pos[1] + direction[1]
+
+
+
+        # Check if the new position is within the grid bounds
+
+        if 0 < new_row <= len(grid) and 0 < new_col <= len(grid[0]):
+
+            neighbors.append((new_row, new_col))
+
+    return neighbors
+
+def astar(grid, start_pos, end_pos, heuristic):
+
+    if heuristic == 'euclidean':
+
+        distance = euclidean_distance
+
+    elif heuristic == 'manhattan':
+
+        distance = manhattan_distance
 
     else:
-        print("null")
 
-def astar(start_c, end_c):
-    map = read_file()
+        raise ValueError("Invalid heuristic")
 
-    #Initialize the visited array
-    visited = []
-    for i in range (0, xlen):
-        templist = []
-        for j in range (0, ylen):
-            templist.append(False)
-        visited.append(templist)
+    frontier = []
 
-    start = node("None", start_c, 0)
-    current = start
-    queue = deque([])
-    visited[start.pos[0]][start.pos[1]] = True
-    queue.append(start)
+    heapq.heappush(frontier, Node(start_pos))
 
-    found = False
+    explored = set()
 
-    while queue:
-        #Pop the current node
-        current = queue.popleft()
+    while frontier:
 
-        #Check is current is end
-        if(current.pos == end_c):
-            found = True
-            break
+        node = heapq.heappop(frontier)
 
-        #Get the children of current
-        children = getChildrenAstar(current, visited, end_c)
+        if node.state == end_pos:
 
-        #Sort children by cost
-        children.sort(key=sortkey)
+            return node
 
-        #Mark as visited and add to queue
-        for i in range(0, len(children)):
-            visited[children[i].pos[0]][children[i].pos[1]] = True
-            queue.append(children[i])
+        explored.add(node.state)
+
+        for action in get_neighbors(node.state, grid):
+
+            if action not in explored:
+
+                new_cost = node.path_cost + get_path_cost(grid, node.state, action)
+
+                h = distance(action, end_pos)
+
+                total_cost = new_cost + h
+
+                child = Node(action, node, path_cost=new_cost)
+
+                heapq.heappush(frontier, child)
+
+                explored.add(action)
+
+    return None
 
 
-    # Step back through the map to update the shortest path
-    if(found == True):
-        while current.parent != "None":
-            map[current.pos[0]][current.pos[1]] = '*'
-            current = current.parent
-        map[current.pos[0]][current.pos[1]] = '*'
+def get_path_cost(grid, current_pos, next_pos):
 
-        print_array(map)
+    current_elevation = grid[current_pos[0] - 1][current_pos[1] - 1]
+
+    next_elevation = grid[next_pos[0] - 1][next_pos[1] - 1]
+
+
+    if current_elevation == 'X' or next_elevation == 'X':
+
+        return float('inf')
+
+
+    current_elevation = int(current_elevation)
+
+    next_elevation = int(next_elevation)
+
+
+
+    elevation_diff = abs(next_elevation - current_elevation)
+
+    if next_elevation >= current_elevation:
+
+        return 1 + elevation_diff
 
     else:
+
+        return 1
+
+
+def euclidean_distance(position1, position2):
+
+    return sqrt((position1[0] - position2[0]) ** 2 + (position1[1] - position2[1]) ** 2)
+
+
+def manhattan_distance(position1, position2):
+
+    return abs(position1[0] - position2[0]) + abs(position1[1] - position2[1])
+
+def build_path(node):
+
+    path = []
+
+    while node:
+
+        path.append(node.state)
+
+        node = node.parent
+
+    return path[::-1]
+
+def main():
+
+    if len(sys.argv) < 3 or len(sys.argv) > 4:
+
+        print("Usage: python pathfinder.py [map] [algorithm] [heuristic (optional)]")
+
+        return
+
+
+    map_filename = sys.argv[1]
+
+    algorithm = sys.argv[2]
+
+    heuristic = sys.argv[3] if len(sys.argv) == 4 else None
+
+
+
+    algorithms = {'bfs': bfs, 'ucs': ucs, 'astar': astar}
+
+    heuristics = {'euclidean', 'manhattan'}
+
+
+
+    if algorithm not in algorithms or (algorithm == 'astar' and heuristic not in heuristics):
+
+        print("Invalid algorithm or heuristic.")
+
+        return
+
+    rows, cols, start_pos, end_pos, grid = read_map(map_filename)
+
+    search_algorithm = algorithms[algorithm]
+
+    if algorithm == 'bfs':
+
+        solution = search_algorithm(grid, start_pos, end_pos)
+
+    else:
+
+        solution = search_algorithm(grid, start_pos, end_pos, heuristic)
+
+    if solution:
+
+        path = build_path(solution)
+
+        for pos in path:
+
+            grid[pos[0] - 1][pos[1] - 1] = '*'
+
+        print_map(grid)
+
+    else:
+
         print("null")
 
-read_goal()
 
-if(algorithm == "bfs"):
-    bfs((0,0),(9,9))
-elif(algorithm == "ucs"):
-    ucs((0,0),(9,9))
-elif(algorithm == "astar"):
-    astar((start),(end))
-else:
-    print("this is for other command line arguments")
+if __name__ == "__main__":
+
+    main()
+
