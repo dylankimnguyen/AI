@@ -25,19 +25,19 @@ def sort_points(points, split_dim):
     # numbers of points
     num_points = sorted_points.shape[0]
 
-    # Calculate med index and extract med point
+    # Calculate median index and extract median point
     if num_points % 2 == 0:  # even number of points
-        med_idx = num_points // 2 - 1
-        med_point1 = sorted_points[med_idx]
-        med_point2 = sorted_points[med_idx + 1]
-        med_value = (med_point1[split_dim] + med_point2[split_dim]) / 2
-        med_point = (med_point1 + med_point2) / 2
+        median_idx = num_points // 2 - 1
+        median_point1 = sorted_points[median_idx]
+        median_point2 = sorted_points[median_idx + 1]
+        median_value = (median_point1[split_dim] + median_point2[split_dim]) / 2
+        median_point = (median_point1 + median_point2) / 2
     else:  # odd number of points
-        med_idx = num_points // 2
-        med_point = sorted_points[med_idx]
-        med_value = med_point[split_dim]
-    # sorted_points, med_value(val),
-    return sorted_points, med_point, med_value, med_idx
+        median_idx = num_points // 2
+        median_point = sorted_points[median_idx]
+        median_value = median_point[split_dim]
+    # sorted_points, median_value(val),
+    return sorted_points, median_point, median_value, median_idx
 
 
 def build_kd_tree(points, depth):
@@ -57,16 +57,16 @@ def build_kd_tree(points, depth):
     else:
         # dim is the split dimension
         split_dim = depth % k
-        sorted_points, med_point, med_value, med_idx = sort_points(points, split_dim)
+        sorted_points, median_point, median_value, median_idx = sort_points(points, split_dim)
 
         node = Node()
         # val is the medium value along that dimension
-        val = med_value
+        val = median_value
         node.dim = split_dim
         node.val = val
 
-        left_points = sorted_points[:med_idx + 1]
-        right_points = sorted_points[med_idx + 1:]
+        left_points = sorted_points[:median_idx + 1]
+        right_points = sorted_points[median_idx + 1:]
         node.left = build_kd_tree(left_points, depth + 1)
         node.right = build_kd_tree(right_points, depth + 1)
         return node
